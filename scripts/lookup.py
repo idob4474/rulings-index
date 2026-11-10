@@ -2,7 +2,8 @@
 """Find an Israeli Supreme Court ruling by case number or parties and extract its exact full text.
 
 The data is the "rulings-2022" release built by .github/workflows/rulings-index.yml
-(Supreme Court only, 2022 snapshot). Standard library only, plus the gh CLI for downloads.
+(Supreme Court only, 2022 snapshot). Standard library only. Downloads use curl or urllib,
+and fall back to the gh CLI when github.com release downloads are blocked.
 
   lookup.py 'ע"א 8146/13'            # by case number, any spelling: עא 8146/13, 8146-13, 8146/2013
   lookup.py "ג'ושה אלדג'אני"          # by party names
@@ -94,6 +95,31 @@ def asset_ids(refresh=False) -> dict:
     return ids
 
 
+def direct(name: str, dest: str) -> bool:
+    """Anonymous HTTPS download of a public release asset. Works without gh or a GitHub login."""
+    url = f"https://github.com/{REPO}/releases/download/{TAG}/{name}"
+    tmp = dest + ".part"
+    try:
+        r = subprocess.run(["curl", "-fsSL", "--retry", "3", "-o", tmp, url], capture_output=True)
+        ok = r.returncode == 0
+    except FileNotFoundError:
+        ok = False
+    if not ok:
+        try:
+            import urllib.request
+            with urllib.request.urlopen(url, timeout=60) as resp, open(tmp, "wb") as f:
+                f.write(resp.read())
+            ok = True
+        except Exception:
+            ok = False
+    if ok and os.path.getsize(tmp) > 0:
+        os.replace(tmp, dest)
+        return True
+    if os.path.exists(tmp):
+        os.remove(tmp)
+    return False
+
+
 def fetch(name: str, source, refresh=False) -> str:
     if source:
         p = os.path.join(source, name)
@@ -102,8 +128,8 @@ def fetch(name: str, source, refresh=False) -> str:
         return p
     os.makedirs(CACHE, exist_ok=True)
     p = os.path.join(CACHE, name)
-    if refresh or not os.path.exists(p):
-        for attempt in (0, 1):  # the release may have been rebuilt with new asset ids
+    if (refresh or not os.path.exists(p)) and not direct(name, p):
+        for attempt in (0, 1):  # gh fallback, the release may have been rebuilt with new asset ids
             ids = asset_ids(refresh or attempt == 1)
             if name in ids:
                 got, err = gh_api(f"repos/{REPO}/releases/assets/{ids[name]}", "application/octet-stream", p)
