@@ -1,0 +1,61 @@
+name: Rulings index
+
+# Builds the full-text lookup index of Supreme Court rulings and publishes it as the
+# release "rulings-2022". The Claude workspace cannot reach Hugging Face, so the heavy
+# download runs here and lookups read the release assets through GitHub.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/build_index.py
+      - .github/workflows/rulings-index.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rulings-index
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TAG: rulings-2022
+      DATASET_URL: https://huggingface.co/datasets/LevMuchnik/SupremeCourtOfIsrael/resolve/main/cases_all.parquet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyarrow
+      - name: Download dataset
+        run: |
+          curl -fL --retry 5 --retry-delay 10 -o "$RUNNER_TEMP/cases_all.parquet" "$DATASET_URL"
+          ls -lh "$RUNNER_TEMP/cases_all.parquet"
+      - name: Build index and shards
+        run: python scripts/build_index.py "$RUNNER_TEMP/cases_all.parquet" "$RUNNER_TEMP/out"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Updates the release in place: deleting a release with hundreds of assets times out.
+        # Shards go up before the index, so a reader never gets an index that points to a missing shard.
+        run: |
+          cd "$RUNNER_TEMP/out"
+          retry() { for i in 1 2 3 4 5; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 10)); done; return 1; }
+          R="$GITHUB_REPOSITORY"
+          if gh api "repos/$R/releases/tags/$TAG" >/dev/null 2>&1; then
+            retry gh release edit "$TAG" -R "$R" --notes-file NOTES.md
+          else
+            retry gh release create "$TAG" -R "$R" --target "$GITHUB_SHA" \
+              --title "Supreme Court rulings index (2022 snapshot)" --notes-file NOTES.md --latest=false
+          fi
+          { ls shard-*.jsonl.gz; echo index.json.gz; echo heads.json.gz; echo stats.json; } > new.txt
+          RID=$(gh api "repos/$R/releases/tags/$TAG" --jq .id)
+          gh api --paginate "repos/$R/releases/$RID/assets?per_page=100" --jq '.[].name' | sort > old.txt
+          sort new.txt | comm -23 old.txt - | while read -r a; do retry gh release delete-asset "$TAG" "$a" -R "$R" --yes; done
+          xargs -n 25 < new.txt | while read -r batch; do retry gh release upload "$TAG" -R "$R" --clobber $batch; done
+          gh api --paginate "repos/$R/releases/$RID/assets?per_page=100" --jq '.[].name' | wc -l
