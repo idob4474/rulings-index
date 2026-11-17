@@ -3,7 +3,7 @@
 Find an Israeli Supreme Court ruling by case number or by the parties' names, and get its exact full text.
 
 ```bash
-gh api repos/idob4474/rulings-index/contents/scripts/lookup.py -H "Accept: application/vnd.github.raw" > lookup.py
+curl -fsSL https://raw.githubusercontent.com/idob4474/rulings-index/main/scripts/lookup.py -o lookup.py
 python3 lookup.py 'ע"א 8146/13'
 python3 lookup.py "ג'ושה אלדג'אני"
 ```
@@ -13,3 +13,7 @@ The texts live in the `rulings-2022` release, built by the workflow in this repo
 ## Source and credit
 
 The data comes from the dataset [LevMuchnik/SupremeCourtOfIsrael](https://huggingface.co/datasets/LevMuchnik/SupremeCourtOfIsrael), a 2022 snapshot of the Supreme Court website, curated by Prof. Lev Muchnik (Hebrew University of Jerusalem) and Dr. Inbal Yahav Shenberger (Tel Aviv University) and published under the OpenRAIL license. Court rulings themselves are not protected by copyright under section 6 of the Israeli Copyright Act.
+
+## Card
+
+`card/card.js` draws the ruling card of the `ruling-analyzer` skill in a chat widget. See `card/README.md`.

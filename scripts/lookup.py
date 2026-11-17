@@ -10,7 +10,8 @@ and fall back to the gh CLI when github.com release downloads are blocked.
   lookup.py --id 123456               # extract one document by its id from an earlier listing
   lookup.py 'ע"א 8146/13' --all       # extract every listed document of the case
 
-Exit codes: 0 text extracted, 2 several candidates (ask the user which one), 3 not found.
+Exit codes: 0 text extracted, 2 several candidates (ask the user which one), 3 not found,
+4 no network access to github.com (ask the user for the ruling file).
 Options: --out DIR (default ./rulings), --source DIR (local index and shards instead of the
 release), --refresh (download the index again).
 """
@@ -25,7 +26,7 @@ import sys
 
 REPO = os.environ.get("RULINGS_REPO", "idob4474/rulings-index")
 TAG = os.environ.get("RULINGS_TAG", "rulings-2022")
-CACHE = os.path.expanduser(os.environ.get("RULINGS_CACHE", "~/.cache/halachot-rulings"))
+CACHE = os.path.expanduser(os.environ.get("RULINGS_CACHE", "~/.cache/rulings-index"))
 NUM_RE = re.compile(r"(\d{1,6})\s*[/\-\\]\s*(\d{4}|\d{2})(?!\d)")
 LOWER_RE = re.compile(r"(?<!\d)\d{3,6}-\d{2}-\d{2}(?!\d)")  # district and magistrate courts, e.g. 58416-04-19
 FINALS = str.maketrans("ךםןףץ", "כמנפצ")
@@ -54,10 +55,20 @@ def case_year(yy: str) -> int:
     return 1900 + y if y > 30 else 2000 + y
 
 
+def no_network(detail: str):
+    print(f"NETWORK cannot download the rulings index from github.com ({detail}). "
+          "This environment has no access to GitHub, so ask the user for the ruling file")
+    sys.exit(4)
+
+
 def gh_api(path: str, accept=None, dest=None):
     """Call the GitHub REST API through gh. REST only: some environments block GraphQL,
     which `gh release` uses, and numeric repository paths, which `--paginate` follows."""
     cmd = ["gh", "api", path] + (["-H", f"Accept: {accept}"] if accept else [])
+    try:
+        subprocess.run(["gh", "--version"], capture_output=True)
+    except FileNotFoundError:
+        return None, "the gh CLI is not installed"
     if dest:
         tmp = dest + ".part"
         with open(tmp, "wb") as f:
@@ -80,12 +91,12 @@ def asset_ids(refresh=False) -> dict:
             return json.load(f)
     rel, err = gh_api(f"repos/{REPO}/releases/tags/{TAG}")
     if rel is None:
-        sys.exit(f"cannot read release {TAG} of {REPO} ({err}). Is the repo attached to this session?")
+        no_network(f"release {TAG} of {REPO} is not reachable, {err}")
     ids, page = {}, 1
     while True:
         batch, err = gh_api(f"repos/{REPO}/releases/{rel['id']}/assets?per_page=100&page={page}")
         if batch is None:
-            sys.exit(f"cannot list assets of {TAG} ({err})")
+            no_network(f"cannot list assets of {TAG}, {err}")
         if not batch:
             break
         ids.update({a["name"]: a["id"] for a in batch})
@@ -138,7 +149,7 @@ def fetch(name: str, source, refresh=False) -> str:
             else:
                 err = "not in the release"
         else:
-            sys.exit(f"download of {name} from {REPO} release {TAG} failed: {err}")
+            no_network(f"download of {name} failed, {err}")
     return p
 
 
