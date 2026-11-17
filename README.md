@@ -17,3 +17,7 @@ The data comes from the dataset [LevMuchnik/SupremeCourtOfIsrael](https://huggin
 ## Card
 
 `card/card.js` draws the ruling card of the `ruling-analyzer` skill in a chat widget. See `card/README.md`.
+
+## Skill
+
+The `ruling-analyzer` skill for Claude, which analyzes an Israeli ruling into a study card, is in `skill/`. Download and install instructions in Hebrew are in `skill/README.md`.
