@@ -303,6 +303,10 @@ def join_broken(lines, i, end, stop):
             gap = True
             continue
         glue = not gap and not raw[:1].isspace() or piece[0] in "'׳)"
+        # a header line that ends with a whole initial (השופט י') takes the surname on the next
+        # line as a new word, so י' + טירקל: is not read as the name יטירקל
+        if pieces == 0 and re.search(r"(?:^|\s)[א-ת]['׳]$", joined) and len(piece) > 2:
+            glue = False
         joined += piece if glue else " " + piece
         pieces, gap = pieces + 1, False
         if piece.endswith(":"):

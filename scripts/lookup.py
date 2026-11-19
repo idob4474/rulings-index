@@ -252,7 +252,48 @@ def extract(r, source, out_dir):
         f.write(header + doc["text"] + "\n")
     print(f"TEXT {dest}")
     print(f"  {len(doc['text'])} chars, {paragraph_report(doc['text'])}")
+    check_metadata(r, doc["text"])
     return dest
+
+
+DOCKET_KINDS = {norm(k) for k in ("ע\"א", "רע\"א", "דנ\"א", "בג\"ץ", "דנג\"ץ", "ע\"פ", "רע\"פ", "דנ\"פ", "עע\"מ", "בש\"א", "בש\"פ", "רע\"ב", "ע\"מ", "בב\"ן")}
+
+
+def check_metadata(r, text):
+    """The index sometimes has the wrong proceeding type (בג"ץ for a civil appeal) or the wrong panel.
+    Compare with the head of the text, which is what the card must follow."""
+    head = text[:3000]
+    kinds = []  # only docket types, so a word like תיק before the number is not read as one
+    for m in re.finditer(r"([א-ת]{1,4}[\"״'׳]?[א-ת]{0,3})\s+" + str(r["num"]) + r"\s*/\s*" + f"{r['year'] % 100:02d}" + r"(?!\d)", head):
+        k = norm(m.group(1)).replace(" ", "")
+        if k[:1] in "בוהל" and k[1:] in DOCKET_KINDS:
+            k = k[1:]  # בע"א in a sentence is ע"א
+        if k in DOCKET_KINDS and k not in kinds:
+            kinds.append(k)
+    meta = norm(NUM_RE.sub("", r["case"])).replace(" ", "")
+    if kinds and meta not in kinds:
+        print(f"NOTE the text opens with {', '.join(kinds)} {r['num']}/{r['year'] % 100:02d} but the index says {r['case']}. "
+              "Use the docket and the panel from the text")
+    shown = [x.split()[-1] for x in re.findall(r"(?m)^\s*כבוד\s+ה?(?:שופט|שופטת|נשיא|נשיאה|המי?שנה\s+לנשיא\S*|ממלא\S*\s+מקום\s+ה?נשיא\S*)\S*\s+([^\n\d]{2,40}?)\s*$", head) if x.split()]
+    surname = lambda x: (norm(x).split() or [""])[-1]  # שטרסברג-כהן and שטרסברג כהן compare as כהן
+    panel = {surname(x) for x in shown}
+    meta_j = {surname(x) for x in (r.get("judges") or "").split(",") if norm(x)}
+    if panel and meta_j and meta_j - panel:
+        print(f"NOTE the panel in the text ({', '.join(shown)}) differs from the index ({r['judges']}). Use the text")
+
+
+def obvious(hits, query=""):
+    """The one candidate that is clearly the ruling meant, when a name search returns many: a judgment
+    of at least 10 pages and at least three times longer than any other candidate. Candidates whose
+    name has every word of the query count first, the rest only matched inside the text."""
+    words = [w for w in norm(query).split() if w not in STOP and len(w) > 1]
+    named = [r for r in hits if words and all(w in norm(r["name"] or "").split() for w in words)]
+    hits = named or hits
+    js = sorted((r for r in hits if r["type"] == JUDGMENT), key=lambda r: -(r["pages"] or 0))
+    if not js or (js[0]["pages"] or 0) < 10:
+        return None
+    rest = max((r["pages"] or 0 for r in hits if r is not js[0]), default=0)
+    return js[0] if js[0]["pages"] >= 3 * max(rest, 1) else None
 
 
 def main():
@@ -303,6 +344,10 @@ def main():
         extract(judgments[0], a.source, a.out)
     elif len(cases) == 1 and len(hits) == 1:
         extract(hits[0], a.source, a.out)
+    elif not NUM_RE.search(a.query) and (r := obvious(hits, a.query)):
+        print(f"AUTO id {r['id']} {r['case']} is the only full judgment among the candidates named in the query "
+              f"({r['pages']} pages). Analyzed it, say so in the opening line and offer the others")
+        extract(r, a.source, a.out)
     else:
         print("CHOOSE several candidates, run again with --id")
         sys.exit(2)

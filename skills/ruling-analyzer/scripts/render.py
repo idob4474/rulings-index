@@ -14,7 +14,9 @@ Standard library only.
 import argparse
 import html
 import json
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -72,6 +74,13 @@ def main():
     ap.add_argument("--inline", action="store_true", help="put card.js inside the widget, for when the CDN is blocked")
     ap.add_argument("-o", "--out")
     a = ap.parse_args()
+    if os.environ.get("RULINGS_DEV") or (Path.home() / ".rulings-dev").exists():
+        # Development: rebuild card.js from tools/card in the repo and inline it, so a design
+        # change shows in the next card without a commit or a CDN pin.
+        build = ASSETS.parents[2] / "tools" / "card" / "build.py"
+        if build.exists():
+            subprocess.run([sys.executable, str(build)], check=True, stdout=subprocess.DEVNULL)
+        a.inline = True
     card = json.loads(Path(a.card).read_text(encoding="utf-8"))
     out = render_inline(card) if a.inline else render_widget(card)
     if a.out:
