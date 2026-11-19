@@ -36,6 +36,7 @@ STOP = set("""
 אותו אותה אותם עצמו עצמה ולא וגם או יותר פחות מאוד גם הזה הזו הזאת האלה אלה אלו שם כאן עליו עליה עליהם
 בית משפט המשפט דין פסק פס השופט השופטת שופט שופטת חוות דעת דעתו דעתה קבע קבעה נקבע הלכה הכרטיס סעיף
 """.split())
+SHORT = 40          # pinned text with fewer content words (an opinion that only agrees) is not scored as LOW
 LOW = 0.34          # below this share of content words found in the best window, the claim is LOW
 MIN_WORDS = 4       # shorter claims are not scored
 WINDOW = 800        # characters in a window of the ruling, the unit a claim is scored against
@@ -168,7 +169,18 @@ class Ruling:
         if not nums:
             return []
         hay = " ".join(self.text[a:b] for a, b in spans).replace(",", "")
-        return sorted(n for n in nums if len(n) >= 2 and not re.search(rf"(?<![\d.]){re.escape(n)}(?![\d])", hay))
+
+        def found(n):
+            if re.search(rf"(?<![\d.]){re.escape(n)}(?![\d])", hay):
+                return True
+            d = re.fullmatch(r"(\d{1,2})\.(\d{1,2})\.(\d{4})", n)
+            if not d:
+                return False
+            # the card writes 19.3.1995, a ruling often writes 19.3.95, 19.03.1995 or 19/3/95
+            dd, mm, yy = (int(x) for x in d.groups())
+            date = rf"(?<![\d./])0?{dd}[./]0?{mm}[./](?:{yy}|{yy % 100:02d})(?!\d)"
+            return bool(re.search(date, hay))
+        return sorted(n for n in nums if len(n) >= 2 and not found(n))
 
     def opinion_spans(self, o, tail=False):
         if tail:
@@ -237,6 +249,8 @@ def check(card, ruling):
             rows.append(row)
             continue
         score, window = ruling.score(spans, cw)
+        # an opinion of a line or two (אני מסכים) has no words to match, so it is never LOW
+        row["short"] = len(content(" ".join(ruling.text[a:b] for a, b in spans))) < SHORT
         # a related ruling's text opens with its own docket, which the citing paragraph often leaves out
         numtext = re.sub(r"^\s*[^\s.]{1,8}\s+\d{1,6}/\d{2,4}\.\s*", "", text) if path[0] == "related" else text
         row.update(score=score, excerpt=ruling.excerpt(window), hint=None, numbers=ruling.numbers_missing(spans, numtext))
@@ -266,6 +280,8 @@ def write_report(rows, path):
         out.append(f"טענה. {r['claim']}")
         if r["unresolved"]:
             out.append(f"לא אותר בנוסח אוטומטית. {', '.join(r['unresolved'])}. מחפשים בנוסח בעצמכם.")
+        if r.get("short"):
+            out.append("מראה המקום הוא חוות דעת קצרה, בדרך כלל הסכמה בלבד. בודקים שהיא אכן מסכימה.")
         if r["excerpt"]:
             out.append(f"מהנוסח. {r['excerpt']}")
         if r["hint"]:
@@ -316,7 +332,7 @@ def main():
     rows = check(card, ruling)
     write_report(rows, a.out)
     scored = [r for r in rows if r["score"] is not None and r["words"] >= MIN_WORDS]
-    low = [r for r in scored if r["score"] < LOW]
+    low = [r for r in scored if r["score"] < LOW and not r.get("short")]
     for r in low:
         hint = f" Maybe [[{r['hint'][0]}]] ({round(r['hint'][1] * 100)}%)" if r["hint"] else ""
         print(f"LOW {r['id']} {r['path']} {' '.join('[[' + x + ']]' for x in r['pins'])} "
