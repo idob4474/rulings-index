@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
-CARD_JS = "https://cdn.jsdelivr.net/gh/idob4474/rulings-index@604cb94b03d1c9e880eb4a0752b1c9b82a96b48f/card/card.js"
+CARD_JS = "https://cdn.jsdelivr.net/gh/idob4474/rulings-index@770a701ec88233ac2ff275e419816d520116f1ba/card/card.js"
 
 
 def esc(s):
