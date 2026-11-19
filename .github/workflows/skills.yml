@@ -35,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -49,10 +51,13 @@ jobs:
         run: python -m py_compile skills/*/scripts/*.py scripts/*.py tools/card/build.py
       - name: The skill's lookup.py is the one in scripts/
         run: cmp scripts/lookup.py skills/ruling-analyzer/scripts/lookup.py
-      - name: card.js is built from the skill's style
+      - name: card.js is built from tools/card, and the skill points at this card.js
         run: |
           python tools/card/build.py --out "$RUNNER_TEMP/card.js"
           cmp "$RUNNER_TEMP/card.js" card/card.js
+          cmp "$RUNNER_TEMP/card.js" skills/ruling-analyzer/assets/card.js
+          sha=$(grep -o 'rulings-index@[0-9a-f]\{40\}' skills/ruling-analyzer/scripts/render.py | cut -d@ -f2)
+          git show "$sha:card/card.js" | cmp - card/card.js || { echo "::error::CARD_JS in render.py points at $sha, whose card.js is not the current one"; exit 1; }
       - name: The example card passes the checks and renders
         working-directory: skills/ruling-analyzer
         run: |
@@ -60,6 +65,7 @@ jobs:
           python -I scripts/render.py assets/example.json > "$RUNNER_TEMP/widget.html"
           python -I scripts/render.py assets/example.json --inline > "$RUNNER_TEMP/inline.html"
           grep -q 'cdn.jsdelivr.net/gh/idob4474/rulings-index@' "$RUNNER_TEMP/widget.html"
+          grep -q 'window.HLCard' "$RUNNER_TEMP/inline.html"
 
   publish:
     needs: check

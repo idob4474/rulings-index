@@ -8,7 +8,7 @@ Claude skills for Israeli law students, and the open index of Supreme Court ruli
 
 | Skill | What it does | Download |
 | --- | --- | --- |
-| [ruling-analyzer](skills/ruling-analyzer) | מנתח פסק דין ישראלי לכרטיס לימוד בעיצוב ספריית ההלכות. לכל טענה יש מראה מקום, וכל מראה מקום וכל ציטוט נבדקים מול הנוסח המלא לפני שהכרטיס מוצג | [ruling-analyzer.zip](https://github.com/idob4474/rulings-index/releases/download/skills/ruling-analyzer.zip) |
+| [ruling-analyzer](skills/ruling-analyzer) | מנתח פסק דין ישראלי לכרטיס לימוד בעיצוב ספריית ההלכות. לכל טענה יש מראה מקום, וכל טענה נבדקת מול הנוסח המלא, בסקריפט ובבודק ספקן, לפני שהכרטיס מוצג | [ruling-analyzer.zip](https://github.com/idob4474/rulings-index/releases/download/skills/ruling-analyzer.zip) |
 
 Every skill lives in `skills/` as a plain folder, exactly as Claude loads it, with its `SKILL.md`, scripts and assets. The ZIPs are built from these folders on every change and published on the [skills release](https://github.com/idob4474/rulings-index/releases/tag/skills), so the download links never change.
 
