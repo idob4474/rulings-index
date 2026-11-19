@@ -1,0 +1,96 @@
+name: Skills
+
+# Checks every skill in skills/ and publishes each one as a ZIP on the release "skills",
+# in the layout Claude accepts under Customize > Skills > Upload a skill. The ZIPs are
+# build output, so they live on the release and not in the repo. Download links stay fixed:
+# https://github.com/idob4474/rulings-index/releases/download/skills/<skill>.zip
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - skills/**
+      - scripts/lookup.py
+      - card/**
+      - tools/**
+      - .github/workflows/skills.yml
+  pull_request:
+    paths:
+      - skills/**
+      - scripts/lookup.py
+      - card/**
+      - tools/**
+      - .github/workflows/skills.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: skills
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Every skill has a SKILL.md whose name is its folder
+        run: |
+          for d in skills/*/; do
+            n=$(basename "$d")
+            head -5 "$d/SKILL.md" | grep -q "^name: \"\?$n\"\?$" || { echo "::error::$d SKILL.md name must be $n"; exit 1; }
+            head -5 "$d/SKILL.md" | grep -q '^description: ' || { echo "::error::$d SKILL.md has no description"; exit 1; }
+          done
+      - name: Scripts compile
+        run: python -m py_compile skills/*/scripts/*.py scripts/*.py tools/card/build.py
+      - name: The skill's lookup.py is the one in scripts/
+        run: cmp scripts/lookup.py skills/ruling-analyzer/scripts/lookup.py
+      - name: card.js is built from the skill's style
+        run: |
+          python tools/card/build.py --out "$RUNNER_TEMP/card.js"
+          cmp "$RUNNER_TEMP/card.js" card/card.js
+      - name: The example card passes the checks and renders
+        working-directory: skills/ruling-analyzer
+        run: |
+          python -I scripts/validate.py assets/example.json
+          python -I scripts/render.py assets/example.json > "$RUNNER_TEMP/widget.html"
+          python -I scripts/render.py assets/example.json --inline > "$RUNNER_TEMP/inline.html"
+          grep -q 'cdn.jsdelivr.net/gh/idob4474/rulings-index@' "$RUNNER_TEMP/widget.html"
+
+  publish:
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Zip each skill
+        run: |
+          mkdir -p dist
+          cd skills
+          for d in */; do
+            n=${d%/}
+            zip -rX "../dist/$n.zip" "$n" -x '*/__pycache__/*' '*.pyc' '*/.DS_Store'
+          done
+          ls -l ../dist
+      - name: Publish on the release "skills"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: skills
+        run: |
+          R="$GITHUB_REPOSITORY"
+          {
+            echo "Skills for Claude, built from $GITHUB_SHA."
+            echo
+            echo "Download a ZIP and upload it in Claude under Customize > Skills > + > Create skill > Upload a skill. The source of every skill is in skills/ in this repo."
+          } > notes.md
+          if gh api "repos/$R/releases/tags/$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" -R "$R" --notes-file notes.md
+          else
+            gh release create "$TAG" -R "$R" --target "$GITHUB_SHA" --title "Skills" --notes-file notes.md --latest=false
+          fi
+          gh release upload "$TAG" -R "$R" --clobber dist/*.zip
+          gh release view "$TAG" -R "$R" --json assets --jq '.assets[] | "\(.name) \(.size)"'

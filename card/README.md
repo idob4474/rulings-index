@@ -10,4 +10,4 @@ The `ruling-analyzer` skill loads it through jsDelivr, pinned to a commit so a c
 <script src="https://cdn.jsdelivr.net/gh/idob4474/rulings-index@COMMIT/card/card.js"></script>
 ```
 
-`card.js` mirrors `scripts/render.py` of the skill, which builds the same card as one self-contained HTML. A change to the design goes into both, and the skill then points at the new commit.
+`card.js` is built by `tools/card/build.py` and mirrors `skills/ruling-analyzer/scripts/render.py`, which builds the same card as one self-contained HTML. A change to the design goes into both, and the skill then points at the new commit.

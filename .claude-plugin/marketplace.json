@@ -1,0 +1,21 @@
+{
+  "name": "halachot-skills",
+  "owner": {
+    "name": "idob4474"
+  },
+  "metadata": {
+    "description": "Claude skills for Israeli law students",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ruling-analyzer",
+      "description": "Analyze an Israeli court ruling into a study card with a pin for every claim, checked against the full text",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/ruling-analyzer"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+<script>
+(function(){
+function rng(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0}return function(){h=(h+0x6d2b79f5)>>>0;let t=h;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
+function tr(n,d,sc,rot,st){const r=1/n,k=n-1,p=[],m=(1-r)+d*r,c=Math.cos(rot),s=Math.sin(rot);for(let i=0;i<=st;i++){const t=2*Math.PI*i/st,x=(1-r)*Math.cos(t)+d*r*Math.cos(k*t),y=(1-r)*Math.sin(t)-d*r*Math.sin(k*t);p.push(((x*c-y*s)/m*sc).toFixed(2)+" "+((x*s+y*c)/m*sc).toFixed(2))}return "M"+p.join("L")+"Z"}
+const el=document.getElementById("hl-seal");if(el){const R=rng(el.dataset.id),n1=7+Math.floor(R()*7),n2=n1+3+Math.floor(R()*5),d1=.55+R()*.4,d2=.7+R()*.3,rot=R()*Math.PI;el.querySelector(".p1").setAttribute("d",tr(n1,d1,44,rot,420));el.querySelector(".p2").setAttribute("d",tr(n2,d2,39,-rot,480))}
+const hl=document.querySelector(".hl"),sw=document.getElementById("hl-pins");if(sw)sw.onclick=function(){const on=sw.getAttribute("aria-checked")!=="true";sw.setAttribute("aria-checked",String(on));hl.classList.toggle("no-pins",!on)};
+const cp=document.getElementById("hl-copy");if(cp)cp.onclick=function(){const w=document.getElementById("hl-write").cloneNode(true);w.querySelectorAll(".pin").forEach(function(x){x.remove()});const t=w.textContent.replace(/\s+/g," ").trim();const done=function(){cp.querySelector("span").textContent="הועתק";setTimeout(function(){cp.querySelector("span").textContent="העתקה"},1600)};if(navigator.clipboard)navigator.clipboard.writeText(t).then(done,function(){});};
+})();
+</script>
