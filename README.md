@@ -40,6 +40,7 @@ Install `law-student-pack` for all the skills, or one of `ruling-analyzer`, `lec
 | `tools/card/` | Source and build script of `card.js` |
 | `scripts/` | `build_index.py` builds the rulings index, `lookup.py` finds a ruling in it. The skill carries the same `lookup.py` |
 | `.claude-plugin/marketplace.json` | The Claude Code plugin marketplace |
+| `CHANGELOG.md` | Versions and what changed |
 | `.github/workflows/skills.yml` | Checks the skills and publishes their ZIPs on the release `skills` |
 | `.github/workflows/rulings-index.yml` | Builds the rulings index and publishes it on the release `rulings-2022` |
 
