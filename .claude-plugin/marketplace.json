@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Claude skills for Israeli law students",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "plugins": [
     {
@@ -15,6 +15,35 @@
       "strict": false,
       "skills": [
         "./skills/ruling-analyzer"
+      ]
+    },
+    {
+      "name": "lecture-summarizer",
+      "description": "Summarize a law lecture transcript into a study card, with transcript cleaning and verified case citations",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/lecture-summarizer"
+      ]
+    },
+    {
+      "name": "exam-simulator",
+      "description": "Practice exam for a law course, with feedback on the answer and an outline of a strong answer",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/exam-simulator"
+      ]
+    },
+    {
+      "name": "law-student-pack",
+      "description": "All the skills for Israeli law students: ruling analyzer, lecture summarizer, exam simulator",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/ruling-analyzer",
+        "./skills/lecture-summarizer",
+        "./skills/exam-simulator"
       ]
     }
   ]

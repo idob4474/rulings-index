@@ -9,6 +9,8 @@ Claude skills for Israeli law students, and the open index of Supreme Court ruli
 | Skill | What it does | Download |
 | --- | --- | --- |
 | [ruling-analyzer](skills/ruling-analyzer) | מנתח פסק דין ישראלי לכרטיס לימוד בעיצוב ספריית ההלכות. לכל טענה יש מראה מקום, וכל טענה נבדקת מול הנוסח המלא, בסקריפט ובבודק ספקן, לפני שהכרטיס מוצג | [ruling-analyzer.zip](https://github.com/idob4474/rulings-index/releases/download/skills/ruling-analyzer.zip) |
+| [lecture-summarizer](skills/lecture-summarizer) | מסכם הרצאה מתמלול לכרטיס לימוד, עם ניקוי תמלול מול הסילבוס ואימות פסקי דין. דורש גם את ruling-analyzer | [lecture-summarizer.zip](https://github.com/idob4474/rulings-index/releases/download/skills/lecture-summarizer.zip) |
+| [exam-simulator](skills/exam-simulator) | מדמה בחינה במשפטים. שואל שאלה, נותן משוב על התשובה ומציג ראשי פרקים לתשובה טובה | [exam-simulator.zip](https://github.com/idob4474/rulings-index/releases/download/skills/exam-simulator.zip) |
 
 Every skill lives in `skills/` as a plain folder, exactly as Claude loads it, with its `SKILL.md`, scripts and assets. The ZIPs are built from these folders on every change and published on the [skills release](https://github.com/idob4474/rulings-index/releases/tag/skills), so the download links never change.
 
@@ -24,10 +26,10 @@ Every skill lives in `skills/` as a plain folder, exactly as Claude loads it, wi
 
 ```
 /plugin marketplace add idob4474/rulings-index
-/plugin install ruling-analyzer@halachot-skills
+/plugin install law-student-pack@halachot-skills
 ```
 
-Or copy `skills/ruling-analyzer` into `~/.claude/skills/`.
+Install `law-student-pack` for all the skills, or one of `ruling-analyzer`, `lecture-summarizer`, `exam-simulator` on its own. Note that `lecture-summarizer` renders its card with `ruling-analyzer`. Or copy a folder from `skills/` into `~/.claude/skills/`.
 
 ## Repository layout
 
