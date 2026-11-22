@@ -1,6 +1,6 @@
 ---
 name: "exam-simulator"
-description: "Run a practice exam for a law course from a topic, a lecture card, a ruling card or a syllabus section. Asks a hypothetical question, grades the student's answer and shows an outline of a strong answer. Use for exam practice."
+description: "Run a practice exam for a law course from a topic, a lecture card, a ruling card or a syllabus section, then grade the answer and outline a strong one. Use for exam practice."
 ---
 
 # מדמה מבחן למשפטים

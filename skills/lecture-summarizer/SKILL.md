@@ -1,6 +1,6 @@
 ---
 name: "lecture-summarizer"
-description: "Summarize a law lecture from a transcript, recording notes or slides into a structured Hebrew study summary with doctrines, case law and open questions. Use for summaries of lectures."
+description: "Summarize a law lecture from a transcript, notes or slides into a visual study card, with transcript cleaning and verified case citations. Use for lecture summaries."
 ---
 
 # מסכם הרצאה למשפטים

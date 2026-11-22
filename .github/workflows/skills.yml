@@ -46,6 +46,8 @@ jobs:
             n=$(basename "$d")
             head -5 "$d/SKILL.md" | grep -q "^name: \"\?$n\"\?$" || { echo "::error::$d SKILL.md name must be $n"; exit 1; }
             head -5 "$d/SKILL.md" | grep -q '^description: ' || { echo "::error::$d SKILL.md has no description"; exit 1; }
+            head -5 "$d/SKILL.md" | grep -Eq '^description: "[A-Z][^"]*\. Use for [^"]*\."$' || { echo "::error::$d description must be English, one sentence of what it does, then 'Use for ...'."; exit 1; }
+            grep -m1 '^# ' "$d/SKILL.md" | grep -q 'למשפטים$' || { echo "::error::$d first heading must end with למשפטים"; exit 1; }
           done
       - name: Scripts compile
         run: python -m py_compile skills/*/scripts/*.py scripts/*.py tools/card/build.py
