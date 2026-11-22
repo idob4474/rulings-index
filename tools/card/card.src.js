@@ -27,7 +27,65 @@
   }
   function li(x) { return "<li>" + rich(x) + "</li>"; }
 
+
+  /* Lecture card. c.type = "lecture". Same header, pins, switch and sections as the ruling card.
+     Fields: courseName, chapter, eyebrow, short (topic), aka, oneLine (core), meta, cite, status, draft,
+     keys [3 indexes into concepts], concepts [[title, text]], outline [[title, text]], cases [[name, kw, text]],
+     open [text], verify [text], traps [text], write, practice [{q, a[]}], sources */
+  function lectureHtml(c) {
+    var concepts = c.concepts || [], keys = c.keys || [0, 1, 2], parts = [];
+    var top = [];
+    if (c.courseName) top.push('<span class="vol">' + esc(c.courseName) + "</span>");
+    [c.chapter, c.eyebrow].forEach(function (x) { if (x) top.push("<span>" + esc(x) + "</span>"); });
+    var facts = (c.meta || []).map(function (m) { return '<div class="fact"><dt>' + esc(m[0]) + "</dt><dd>" + rich(m[1]) + "</dd></div>"; }).join("");
+    var trust = c.draft
+      ? '<span class="trust draft">' + icon("alert-triangle") + "טיוטה, לא נבדק מול ההרצאה</span>"
+      : '<span class="trust">' + icon("shield-check") + esc(c.status) + "</span>";
+    parts.push('<div class="hl" data-vol="corp">');
+    parts.push("<header>\n" + (top.length ? '<div class="top">' + top.join('<span class="sep">·</span>') + "</div>\n" : "") +
+      "<h1>" + esc(c.short) + "</h1>\n" + '<p class="aka">' + rich(c.aka) + "</p>\n" + '<p class="lead">' + rich(c.oneLine) + "</p>\n" +
+      '<dl class="facts">' + facts + "</dl>\n" +
+      '<div class="meta">' + trust + '<div class="end"><button type="button" class="switch" role="switch" aria-checked="true" data-act="pins">' +
+      '<i aria-hidden="true"></i>מראי מקום</button>' +
+      '<button type="button" class="btn mode" data-act="mode" aria-label="מצב כהה" title="מצב כהה">' + icon("moon") + "</button></div></div>\n" +
+      (c.cite ? '<p class="cite">' + esc(c.cite) + "</p>\n" : "") + "</header>");
+    var keyItems = keys.filter(function (k) { return k >= 0 && k < concepts.length; }).map(function (k) {
+      return "<li><div><b>" + esc(concepts[k][0]) + "</b>" + rich(concepts[k][1]) + "</div></li>";
+    }).join("\n");
+    parts.push('<section class="keys-b"><h3 class="lbl">שלושת הרעיונות לזכור</h3><ol class="keys">\n' + keyItems + "\n</ol></section>");
+    if (c.write) parts.push('<section class="write"><div class="head"><h3 class="lbl">מה לכתוב במבחן</h3><button type="button" class="btn sm" data-act="copy">' +
+      icon("copy") + '<span>העתקה</span></button></div><p data-write>' + rich(c.write) + "</p></section>");
+    var report = "מצאתי טעות בסיכום של " + (c.short || "ההרצאה") + ". בוא נבדוק אותו שוב מול ההרצאה";
+    parts.push('<div class="actions"><button type="button" class="btn" data-prompt="' + esc(report) + '">' + icon("flag") + "דיווח על טעות ↗</button>" +
+      '<button type="button" class="btn" data-act="print">' + icon("printer") + "הדפסה</button></div>");
+    var secs = [], body;
+    var ol = c.outline || [];
+    if (ol.length) secs.push(section("מהלך ההרצאה", "list-details", "<div>\n" + ol.map(function (o) {
+      return '<div class="rel"><b>' + esc(o[0]) + "</b><p>" + rich(o[1]) + "</p></div>"; }).join("\n") + "\n</div>", ol.length));
+    if (concepts.length) secs.push(section("מושגים והלכות", "bulb", '<ul class="holdings">\n' + concepts.map(function (h) {
+      return "<li><b>" + esc(h[0]) + "</b>" + rich(h[1]) + "</li>"; }).join("\n") + "\n</ul>", concepts.length));
+    var cs = c.cases || [];
+    if (cs.length) secs.push(section("פסיקה שהוזכרה", "gavel", "<div>\n" + cs.map(function (r) {
+      var m = String(r[2]).match(DOCKET_LEAD);
+      if (m) { var ask = "נתח את " + m[1] + " " + String(r[0]).replace(/\s*\(\s*\d+\/\d+\s*\)/g, "");
+        return '<div class="rel go" role="button" tabindex="0" data-prompt="' + esc(ask) + '"><span class="kw">' + esc(r[1]) + "</span><b>" + esc(r[0]) + " ↗</b><p>" + rich(r[2]) + "</p></div>"; }
+      return '<div class="rel"><span class="kw">' + esc(r[1]) + "</span><b>" + esc(r[0]) + "</b><p>" + rich(r[2]) + "</p></div>";
+    }).join("\n") + "\n</div>", cs.length));
+    if ((c.open || []).length) secs.push(section("שאלות פתוחות ומחלוקות", "help-circle", '<ul class="plain">' + c.open.map(li).join("") + "</ul>"));
+    if ((c.traps || []).length) secs.push(section("מלכודות למבחן", "target", '<ul class="plain traps">\n' + c.traps.map(li).join("\n") + "\n</ul>"));
+    if ((c.verify || []).length) secs.push(section("לאימות מול המקור", "alert-circle", '<ul class="plain">' + c.verify.map(li).join("") + "</ul>"));
+    var pr = c.practice || [];
+    if (pr.length) secs.push(section("תרגול", "help", pr.map(function (p) {
+      return '<details class="qa"><summary><span>' + rich(p.q) + '</span><span class="open">הצגת ראשי פרקים</span></summary>' +
+        '<div class="ans"><ul class="plain">' + p.a.map(li).join("") + "</ul></div></details>"; }).join("\n"), pr.length));
+    var src = (c.sources || []).map(function (x) { return Array.isArray(x) ? '<li><a href="' + esc(x[1]) + '">' + esc(x[0]) + "</a></li>" : "<li>" + rich(x) + "</li>"; }).join("");
+    if (src) secs.push(section("מקורות", "file-text", '<ul class="sources">' + src + "</ul>"));
+    parts.push('<div class="sections">\n' + secs.join("\n") + "\n</div>\n</div>");
+    return parts.join("\n");
+  }
+
   function html(c) {
+    if (c.type === "lecture") return lectureHtml(c);
     var vol = c.course === "torts" ? "torts" : "corp";
     var docket = c.docket || c.cite;
     var holdings = c.holdings || [];

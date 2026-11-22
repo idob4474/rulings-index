@@ -39,6 +39,8 @@ def payload(c):
 
 
 def title(c):
+    if c.get("type") == "lecture":
+        return f'<h2 class="sr-only">כרטיס סיכום הרצאה, {esc(plain(c["short"]))}</h2>'
     docket = c.get("docket") or c["cite"]
     return f'<h2 class="sr-only">כרטיס ספריית הלכות ל{esc(plain(docket + " " + c["name"]))}</h2>'
 
@@ -54,7 +56,7 @@ def render_inline(c):
 
 
 def render_widget(c):
-    docket = c.get("docket") or c["cite"]
+    docket = c["short"] if c.get("type") == "lecture" else (c.get("docket") or c["cite"])
     data = payload(c)
     retry = json.dumps(f"הכרטיס של {docket} לא נטען. הצג אותו שוב בגרסה המלאה", ensure_ascii=False)
     return "\n".join([
