@@ -19,7 +19,7 @@ ROOT = HERE.parents[1]
 
 ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("--out", type=Path, help="write one file here instead of the two usual places")
-ap.add_argument("--version", default="card-v2")
+ap.add_argument("--version", default="card-v3")
 a = ap.parse_args()
 
 css = (HERE / "card.css").read_text(encoding="utf-8")
