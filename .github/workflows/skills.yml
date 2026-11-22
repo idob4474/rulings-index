@@ -46,6 +46,8 @@ jobs:
             n=$(basename "$d")
             head -5 "$d/SKILL.md" | grep -q "^name: \"\?$n\"\?$" || { echo "::error::$d SKILL.md name must be $n"; exit 1; }
             head -5 "$d/SKILL.md" | grep -q '^description: ' || { echo "::error::$d SKILL.md has no description"; exit 1; }
+            head -5 "$d/SKILL.md" | grep -Eq '^description: "[A-Z][^"]*\. Use for [^"]*\."$' || { echo "::error::$d description must be English, one sentence of what it does, then 'Use for ...'."; exit 1; }
+            grep -m1 '^# ' "$d/SKILL.md" | grep -q 'למשפטים$' || { echo "::error::$d first heading must end with למשפטים"; exit 1; }
           done
       - name: Scripts compile
         run: python -m py_compile skills/*/scripts/*.py scripts/*.py tools/card/build.py
@@ -66,6 +68,24 @@ jobs:
           python -I scripts/render.py assets/example.json --inline > "$RUNNER_TEMP/inline.html"
           grep -q 'cdn.jsdelivr.net/gh/idob4474/rulings-index@' "$RUNNER_TEMP/widget.html"
           grep -q 'window.HLCard' "$RUNNER_TEMP/inline.html"
+
+      - name: The lecture example card passes the checks and renders
+        working-directory: skills/ruling-analyzer
+        run: |
+          python -I scripts/validate.py ../lecture-summarizer/assets/example.json
+          python -I scripts/render.py ../lecture-summarizer/assets/example.json > "$RUNNER_TEMP/lecture.html"
+          grep -q 'cdn.jsdelivr.net/gh/idob4474/rulings-index@' "$RUNNER_TEMP/lecture.html"
+      - name: The marketplace lists only skill folders that exist
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          m = json.load(open(".claude-plugin/marketplace.json", encoding="utf-8"))
+          bad = [s for p in m["plugins"] for s in p["skills"] if not os.path.isfile(os.path.join(s, "SKILL.md"))]
+          listed = {s for p in m["plugins"] for s in p["skills"]}
+          missing = [f"./skills/{d}" for d in os.listdir("skills") if f"./skills/{d}" not in listed]
+          if bad or missing:
+              print("::error::marketplace.json mismatch", bad, missing); sys.exit(1)
+          PY
 
   publish:
     needs: check

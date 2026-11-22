@@ -1,9 +1,9 @@
 ---
 name: "ruling-analyzer"
-description: "Analyze an Israeli court ruling (פסק דין) from a case number, the parties' names or an attached file, fetching the exact full text itself, and show it in chat as a visual study card in the structure and design of ספריית ההלכות."
+description: "Analyze an Israeli court ruling from a case number, the parties' names or an attached file, and show it as a visual study card with a pin for every claim. Use for ruling analysis."
 ---
 
-# מנתח פסקי דין בפורמט ספריית ההלכות
+# מנתח פסקי דין למשפטים
 
 הסקיל מנתח פסק דין ומציג אותו בצ'אט ככרטיס לימוד ויזואלי במבנה ובעיצוב של ספריית ההלכות. העיקרון אחד. כל טענה בכרטיס נשענת על הנוסח המלא של פסק הדין ומסומנת במראה מקום. מה שלא מופיע בנוסח לא נכנס, ואם יש ספק משמיטים.
 

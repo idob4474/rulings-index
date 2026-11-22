@@ -136,6 +136,46 @@ def need_list(c, key, lo=0, path=None):
     return v
 
 
+def check_lecture(c):
+    """Schema check for a lecture card (type lecture). No full text exists, so pins are not checked."""
+    for k in ("courseName", "chapter", "eyebrow", "short", "aka", "cite", "status"):
+        need_str(c, k)
+    one = c.get("oneLine")
+    if need_str(c, "oneLine") and not re.match(r"^[\s\S]*==[^=][\s\S]*?==", one):
+        warn("oneLine", "has no ==highlight== for the main point")
+    if c.get("draft") is not True:
+        warn("draft", "a lecture card is built from a transcript only, set draft to true")
+    for i, m in enumerate(need_list(c, "meta", 1)):
+        if not (isinstance(m, list) and len(m) == 2 and all(is_str(x) for x in m)):
+            err(f"meta.{i}", "must be [label, value]")
+    if isinstance(c.get("meta"), list) and len(c["meta"]) > 4:
+        warn("meta", "has more than 4 pairs, the header shows 4")
+    concepts = need_list(c, "concepts", 3)
+    for name, width in (("concepts", 2), ("outline", 2), ("cases", 3)):
+        for i, row in enumerate(concepts if name == "concepts" else need_list(c, name, 0)):
+            if not (isinstance(row, list) and len(row) == width and all(is_str(x) for x in row)):
+                err(f"{name}.{i}", f"must be a list of {width} non-empty strings")
+    keys = c.get("keys")
+    if not (isinstance(keys, list) and len(keys) == 3 and all(isinstance(k, int) and 0 <= k < len(concepts) for k in keys)):
+        err("keys", f"must be 3 indexes into concepts (0 to {len(concepts) - 1})")
+    for name in ("open", "verify", "traps", "sources"):
+        v = c.get(name)
+        if v is not None and not isinstance(v, list):
+            err(name, "must be a list")
+    if c.get("write") is not None and not is_str(c["write"]):
+        err("write", "must be a string")
+    if not c.get("verify"):
+        warn("verify", "is empty, a lecture summary built from a transcript almost always has something to verify")
+    for i, q in enumerate(c.get("practice") or []):
+        if not (isinstance(q, dict) and is_str(q.get("q")) and isinstance(q.get("a"), list)):
+            err(f"practice.{i}", "must be {q, a[]}")
+    for path, text in walk(c):
+        if path and path[0] == "sources":
+            continue
+        if re.search(r"[:;\u2013\u2014]|\"", text):
+            warn(p(path), "has a colon, semicolon, long dash or ASCII quote. Run validate.py --fix")
+
+
 def check_schema(c):
     if not isinstance(c.get("course"), str) or not re.fullmatch(r"[a-z0-9_-]+", c.get("course") or ""):
         err("course", "must be a course id like torts or corp (use other when there is no course)")
@@ -728,7 +768,12 @@ def main():
         if fixed:
             Path(sys.argv[1]).write_text(json.dumps(card, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         notes.extend(fixed)
-    check_schema(card)
+    if card.get("type") == "lecture":
+        check_lecture(card)
+        if len(sys.argv) == 3:
+            warn("text", "a lecture card has no ruling text, the file argument is ignored")
+    else:
+        check_schema(card)
     pins = sum(len(PIN.findall(s)) for _, s in walk(card))
     if len(sys.argv) == 3:
         raw = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")
