@@ -285,10 +285,12 @@ def check_metadata(r, text):
 def obvious(hits, query=""):
     """The one candidate that is clearly the ruling meant, when a name search returns many: a judgment
     of at least 10 pages and at least three times longer than any other candidate. Candidates whose
-    name has every word of the query count first, the rest only matched inside the text."""
+    name has every word of the query are the only ones considered."""
     words = [w for w in norm(query).split() if w not in STOP and len(w) > 1]
     named = [r for r in hits if words and all(w in norm(r["name"] or "").split() for w in words)]
-    hits = named or hits
+    if not named:
+        return None  # nothing carries the query's names, so any pick would be a guess
+    hits = named
     js = sorted((r for r in hits if r["type"] == JUDGMENT), key=lambda r: -(r["pages"] or 0))
     if not js or (js[0]["pages"] or 0) < 10:
         return None
