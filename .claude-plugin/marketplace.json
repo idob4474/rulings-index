@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Claude skills for Israeli law students",
-    "version": "1.1.0"
+    "version": "1.3.0"
   },
   "plugins": [
     {
